@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include <cstdint>
 
@@ -39,7 +40,7 @@ class StringRef;
 class raw_ostream;
 
 /// Generic interface to target specific assembler backends.
-class MCAsmBackend {
+class LLVM_ABI MCAsmBackend {
 protected: // Can only create subclasses.
   MCAsmBackend(llvm::endianness Endian) : Endian(Endian) {}
 
@@ -90,11 +91,6 @@ public:
   /// Get information on a fixup kind.
   virtual MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const;
 
-  // Hook used by the default `addReloc` to check if a relocation is needed.
-  virtual bool shouldForceRelocation(const MCFixup &, const MCValue &) {
-    return false;
-  }
-
   /// Hook to check if extra nop bytes must be inserted for alignment directive.
   /// For some targets this may be necessary in order to support linker
   /// relaxation. The number of bytes to insert are returned in Size.
@@ -115,9 +111,10 @@ public:
     llvm_unreachable("Need to implement hook if target has custom fixups");
   }
 
-  virtual bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
-                        uint64_t &FixedValue, bool IsResolved);
+  void maybeAddReloc(const MCFragment &, const MCFixup &, const MCValue &,
+                     uint64_t &Value, bool IsResolved);
 
+  /// Determine if a relocation is required. In addition,
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
   /// appropriate. Errors (such as an out of range fixup value) should be
